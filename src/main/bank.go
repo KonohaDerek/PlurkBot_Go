@@ -13,13 +13,6 @@ type Bank struct {
 	Currancy string
 }
 
-/*EsunBank ...
-  玉山銀行類型
-*/
-type EsunBank struct {
-	Bank
-}
-
 /*BankRate ...
   銀行匯率基底
 */
@@ -36,22 +29,6 @@ type BankRate struct {
 */
 type Rate interface {
 	GetRate() []BankRate
-}
-
-/*GetRate ...
-實現玉山銀行取得匯率
-*/
-func (b *EsunBank) GetRate() (*[]BankRate, error) {
-	var rate []BankRate
-	rate = append(rate, BankRate{"JPY", 0.267, 0.267, 0.268, 0.269})
-	if b == nil {
-		return nil, fmt.Errorf("err")
-	}
-
-	if b.Currancy == "" {
-		return &rate, nil
-	}
-	return &rate, nil
 }
 
 func convertToFloat(str string) float64 {

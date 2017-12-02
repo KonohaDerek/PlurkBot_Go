@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
 	plurgo "github.com/clsung/plurgo/plurkgo"
 	"github.com/garyburd/go-oauth/oauth"
@@ -20,6 +25,8 @@ var (
 	errc       int
 	taiwanBank *TaiwanBank
 	esunBank   *EsunBank
+	isCall     bool
+	isDone     bool
 )
 
 func init() {
@@ -33,10 +40,49 @@ func init() {
 }
 
 func main() {
-	token := plurkAuth(&c)
-	if token == nil {
-		fmt.Print("err")
+	// 認證
+	tok := plurkAuth(&c)
+	// 取得使用者資料
+	opt := map[string]string{}
+	opt["include_plurks"] = "false"
+	ans, _ := callAPI(tok, "/APP/Profile/getOwnProfile", opt)
+	plurker := plurkerObj{} // 使用者
+	json.Unmarshal(ans, &plurker)
+	printObjIndent(plurker)
+
+	for true {
+		//取得最近的噗
+		opt = map[string]string{}
+		opt["offset"] = time.Now().Format("2006-1-2T15:04:05") //現在時間
+		opt["limit"] = "10"
+		opt["minial_user"] = "true"
+		ans, _ := callAPI(tok, "/APP/Timeline/getPlurks", opt)
+		plurks := plurksObj{} // 抓回來的噗
+		json.Unmarshal(ans, &plurks)
+		isCall := false
+		isDone := false // 是否結束
+		for _, plurk := range plurks.Plurks {
+			isCall = strings.Contains(plurk.ContentRaw, "匯率") // 有開村字串
+			if isCall {
+				// 取得回應
+				opt = map[string]string{}
+				opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
+				opt["minimal_user"] = "true"
+				ans, _ = callAPI(tok, "/APP/Responses/get", opt)
+				responses := plurksObj{}
+				json.Unmarshal(ans, &responses)
+				for _, response := range responses.Responses { // 每個回應
+					fmt.Println(response.ContentRaw)
+					if !isDone {
+						isDone, _ = regexp.MatchString("匯率", response.ContentRaw)
+						fmt.Println(response.ContentRaw)
+					}
+				}
+			}
+		}
+		break
 	}
+
 	// taiwanBank.Currancy = "USD"
 	taiwanRates, err := taiwanBank.GetRate()
 	if err != nil {
@@ -87,6 +133,17 @@ func callAPI(token *oauth.Credentials, api string, opt map[string]string) ([]byt
 		errc = 0
 	}
 	return ans, e
+}
+
+func printJSONIndent(data []byte, indent string) {
+	var jsi bytes.Buffer
+	json.Indent(&jsi, []byte(data), "", indent)
+	fmt.Printf("\n%s\n\n", jsi.Bytes())
+}
+
+func printObjIndent(data interface{}) {
+	ans, _ := json.Marshal(data)
+	printJSONIndent(ans, "  ")
 }
 
 //格式化輸出並換行

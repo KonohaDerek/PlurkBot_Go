@@ -39,6 +39,7 @@ Thumbs.db
 # Config File #
 ###############
 config.json
+config.sample.json
 
 # Bin Directory #
 #################

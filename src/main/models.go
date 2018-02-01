@@ -24,6 +24,7 @@ type plurkObj struct {
 	Content    string `json:"content"`
 	ContentRaw string `json:"content_raw"`
 	ID         int    `json:"id"`
+	Qualifier  string `json:"qualifier"`
 }
 
 type plurksObj struct {

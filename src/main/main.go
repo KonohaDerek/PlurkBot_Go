@@ -35,8 +35,8 @@ func init() {
 	flag.BoolVar(&h, "h", false, "說明")
 	flag.IntVar(&l, "l", -1, "紀錄")
 	flag.Usage = usage
-	taiwanBank = &TaiwanBank{Bank: Bank{Name: "Bank of Taiwan", CN: "台灣銀行", URL: "http://rate.bot.com.tw/xrt/flcsv/0/day"}}
-	esunBank = &EsunBank{Bank: Bank{Name: "Esun Bank", CN: "玉山銀行"}}
+	taiwanBank = &TaiwanBank{Bank: Bank{Name: "Bank of Taiwan", CN: "台灣銀行", URL: "http://rate.bot.com.tw/xrt/flcsv/0/day", Currancy: "JPY"}}
+	esunBank = &EsunBank{Bank: Bank{Name: "Esun Bank", CN: "玉山銀行", Currancy: "JPY"}}
 }
 
 func main() {
@@ -61,9 +61,11 @@ func main() {
 		json.Unmarshal(ans, &plurks)
 		isCall := false
 		isDone := false // 是否結束
+
 		for _, plurk := range plurks.Plurks {
-			isCall = strings.Contains(plurk.ContentRaw, "匯率") // 有開村字串
+			isCall = strings.Contains(plurk.ContentRaw, "匯率") && (plurk.OwnerID == plurker.UserInfo.UserID) && strings.EqualFold(plurk.Qualifier, "asks") // 有匯率字串
 			if isCall {
+				fmt.Println(plurk.ContentRaw)
 				// 取得回應
 				opt = map[string]string{}
 				opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
@@ -72,15 +74,23 @@ func main() {
 				responses := plurksObj{}
 				json.Unmarshal(ans, &responses)
 				for _, response := range responses.Responses { // 每個回應
-					fmt.Println(response.ContentRaw)
 					if !isDone {
-						isDone, _ = regexp.MatchString("匯率", response.ContentRaw)
-						fmt.Println(response.ContentRaw)
+						isDone, _ = regexp.MatchString("取得匯率", response.ContentRaw)
 					}
+				}
+				if !isDone {
+					//填入幣別
+					currency := strings.Trim(strings.Replace(plurk.ContentRaw, "匯率", "", 1), " ")
+					content := callRate(currency)
+					opt = map[string]string{}
+					opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
+					opt["qualifier"] = "says"
+					opt["content"] = fmt.Sprintf("%s", content)
+					callAPI(tok, "/APP/Responses/responseAdd", opt)
 				}
 			}
 		}
-		break
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -141,4 +151,50 @@ func printObjIndent(data interface{}) {
 func printfln(format string, a ...interface{}) {
 	fotmatSrt := fmt.Sprintf(format, a)
 	fmt.Println(fotmatSrt)
+}
+
+//呼叫匯率
+func callRate(currency string) string {
+	if len(currency) > 0 {
+		esunBank.Currancy = currency
+		taiwanBank.Currancy = currency
+	}
+
+	content := fmt.Sprintf("取得匯率 (%s)\n", time.Now().Format("2006-01-02 15:04:05"))
+
+	esunRates, err := esunBank.GetRate()
+	if err != nil {
+		printfln("%v", err)
+	}
+	taiwanRates, err := taiwanBank.GetRate()
+	if err != nil {
+		printfln("%v", err)
+	}
+
+	array := []BankRate{}
+	array = append(array, *esunRates...)
+	array = append(array, *taiwanRates...)
+	if len(array) == 0 {
+		content += fmt.Sprintf("失敗，查無資料")
+		return content
+	}
+
+	content += fmt.Sprintf("%s匯率\n", esunBank.CN)
+	for _, rate := range *esunRates {
+		content += fmt.Sprintf("幣別 : %s\n現金(賣) : %f\n即期(賣) : %f\n",
+			rate.Currancy,
+			rate.CashSell,
+			rate.SpotSell,
+		)
+	}
+
+	content += fmt.Sprintf("%s匯率\n", taiwanBank.CN)
+	for _, rate := range *taiwanRates {
+		content += fmt.Sprintf("幣別 : %s\n現金(賣) : %f\n即期(賣) : %f\n",
+			rate.Currancy,
+			rate.CashSell,
+			rate.SpotSell,
+		)
+	}
+	return content
 }

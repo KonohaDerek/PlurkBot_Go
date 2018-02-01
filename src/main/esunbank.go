@@ -25,19 +25,19 @@ type dType struct {
 
 type esunRate struct {
 	Name           string
-	CashBBoardRate float64
 	URL            string `json:"Url"`
 	Alt            string
-	CashBonus      float64
-	BBoardRate     float64
 	CCY            string
 	Key            string
 	Bonus          float64
 	Serial         int
 	UpdateTime     JSONTime
 	Title          string
-	SBoardRate     float64
-	CashSBoardRate float64
+	CashBonus      float64
+	SBoardRate     float64     `json:"SBoardRate"`
+	BBoardRate     float64     `json:"BBoardRate"`
+	CashSBoardRate json.Number `json:"CashSBoardRate"`
+	CashBBoardRate json.Number `json:"CashBBoardRate"`
 	Description    string
 }
 
@@ -47,11 +47,14 @@ type esunRate struct {
 func (b *EsunBank) GetRate() (*[]BankRate, error) {
 	var rate []BankRate
 	datas := doGetEsunRate()
+
 	for _, element := range datas {
+		CashSell, _ := element.CashSBoardRate.Float64()
+		CashBuy, _ := element.CashBBoardRate.Float64()
 		item := BankRate{
 			Currancy: element.Key,
-			CashSell: element.CashSBoardRate,
-			CashBuy:  element.CashBBoardRate,
+			CashSell: CashSell,
+			CashBuy:  CashBuy,
 			SpotSell: element.SBoardRate,
 			SpotBuy:  element.BBoardRate,
 		}

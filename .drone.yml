@@ -4,8 +4,7 @@ pipeline:
     commands:
       - go get
       - go build 
-      - go test 
+      - go test ./src/main/
 matrix:  
   GO_VERSION:
     - 1.7
-    - 1.6

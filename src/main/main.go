@@ -52,6 +52,10 @@ func main() {
 		ans, _ := callAPI(tok, "/APP/Profile/getOwnProfile", opt)
 		plurker := plurkerObj{} // 使用者
 		json.Unmarshal(ans, &plurker)
+
+		//另起執行續執行加入好友
+		go AutoAddFriends(tok)
+
 		for true {
 			//取得最近的噗
 			opt = map[string]string{}
@@ -65,9 +69,8 @@ func main() {
 			isDone := false // 是否結束
 
 			for _, plurk := range plurks.Plurks {
-				isCall = strings.Contains(plurk.ContentRaw, "匯率") && (plurk.OwnerID == plurker.UserInfo.UserID) && strings.EqualFold(plurk.Qualifier, "asks") // 有匯率字串
+				isCall = strings.Contains(plurk.ContentRaw, "匯率") && strings.EqualFold(plurk.Qualifier, "asks") // 有匯率字串
 				if isCall {
-					fmt.Println(plurk.ContentRaw)
 					// 取得回應
 					opt = map[string]string{}
 					opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)

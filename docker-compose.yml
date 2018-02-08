@@ -1,0 +1,8 @@
+version: '2'
+
+services:
+  plurk-server:
+    build : ./
+    image : plurk.bot/bank.rate
+    restart : always
+

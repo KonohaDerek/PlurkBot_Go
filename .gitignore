@@ -45,3 +45,11 @@ config.sample.json
 #################
 bin/
 pkg/
+
+# debug file    #
+#################
+src/main/debug
+
+# VS Code       #
+#################
+.vscode/

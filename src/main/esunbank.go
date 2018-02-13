@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-type JSONTime time.Time
-
 /*EsunBank ...
   玉山銀行類型
 */
@@ -49,6 +47,8 @@ func (b *EsunBank) GetRate() (*[]BankRate, error) {
 	datas := doGetEsunRate()
 
 	for _, element := range datas {
+
+		fmt.Println(element.UpdateTime.String())
 		CashSell, _ := element.CashSBoardRate.Float64()
 		CashBuy, _ := element.CashBBoardRate.Float64()
 		item := BankRate{
@@ -57,6 +57,8 @@ func (b *EsunBank) GetRate() (*[]BankRate, error) {
 			CashBuy:  CashBuy,
 			SpotSell: element.SBoardRate,
 			SpotBuy:  element.BBoardRate,
+			BankInfo: b.Bank,
+			RateTime: element.UpdateTime.Time,
 		}
 		//check has to Only Currancy
 		if len(b.Currancy) > 0 && b.Currancy != item.Currancy {
@@ -85,6 +87,7 @@ func doGetEsunRate() []esunRate {
 	if err != nil {
 		fmt.Println(err.Error)
 	}
+	fmt.Println(u["d"].(string))
 	str := []byte(u["d"].(string))
 	r := dType{}
 	err = json.Unmarshal(str, &r)

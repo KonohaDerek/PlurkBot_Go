@@ -41,6 +41,7 @@ func (b *TaiwanBank) GetRate() (*[]BankRate, error) {
 			CashBuy:  convertToFloat(splitStr[3]),
 			SpotSell: convertToFloat(splitStr[12]),
 			SpotBuy:  convertToFloat(splitStr[2]),
+			BankInfo: b.Bank,
 		}
 		//check has to Only Currancy
 		if len(b.Currancy) > 0 && b.Currancy != item.Currancy {

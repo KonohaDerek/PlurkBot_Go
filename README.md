@@ -9,4 +9,4 @@ CGO_ENABLED=0 GOOS=linux GOARCH=386
 # Linux 64 enviroment
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 # Docker-Compose Run Command
-docker-compose up -d
+docker-compose up --build -d

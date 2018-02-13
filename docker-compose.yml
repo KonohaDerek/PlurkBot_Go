@@ -3,6 +3,6 @@ version: '2'
 services:
   plurk-server:
     build : ./
-    image : plurk.bot/bank.rate
+    image : plurk.bot/bank.rate:latest
     restart : always
 

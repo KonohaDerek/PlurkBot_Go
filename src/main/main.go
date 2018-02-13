@@ -69,8 +69,11 @@ func main() {
 			isDone := false // 是否結束
 
 			for _, plurk := range plurks.Plurks {
-				isCall = strings.Contains(plurk.ContentRaw, "匯率") && strings.EqualFold(plurk.Qualifier, "asks") // 有匯率字串
+				// 有匯率字串及問
+				isCall = strings.Contains(plurk.ContentRaw, "匯率") && strings.EqualFold(plurk.Qualifier, "asks")
+
 				if isCall {
+					fmt.Println(plurk.ContentRaw)
 					// 取得回應
 					opt = map[string]string{}
 					opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
@@ -86,12 +89,14 @@ func main() {
 					if !isDone {
 						//填入幣別
 						currency := strings.Trim(strings.Replace(plurk.ContentRaw, "匯率", "", 1), " ")
-						content := callRate(currency)
+						contents := callRate(currency)
 						opt = map[string]string{}
 						opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
 						opt["qualifier"] = "says"
-						opt["content"] = fmt.Sprintf("%s", content)
-						callAPI(tok, "/APP/Responses/responseAdd", opt)
+						for _, content := range contents {
+							opt["content"] = fmt.Sprintf("%s", content)
+							callAPI(tok, "/APP/Responses/responseAdd", opt)
+						}
 					}
 				}
 			}
@@ -160,13 +165,13 @@ func printfln(format string, a ...interface{}) {
 }
 
 //呼叫匯率
-func callRate(currency string) string {
-	if len(currency) > 0 {
-		esunBank.Currancy = currency
-		taiwanBank.Currancy = currency
+func callRate(currency string) []string {
+	if len(currency) <= 0 {
+		currency = "JPY"
 	}
-
-	content := fmt.Sprintf("取得匯率 (%s)\n", time.Now().Format("2006-01-02 15:04:05"))
+	esunBank.Currancy = currency
+	taiwanBank.Currancy = currency
+	content := fmt.Sprintf("取得匯率-%s (%s)\n", currency, time.Now().Local().Format("2006-01-02 15:04:05"))
 
 	esunRates, err := esunBank.GetRate()
 	if err != nil {
@@ -182,25 +187,17 @@ func callRate(currency string) string {
 	array = append(array, *taiwanRates...)
 	if len(array) == 0 {
 		content += fmt.Sprintf("失敗，查無資料")
-		return content
+		return []string{content}
 	}
+	str := []string{}
+	for index, rate := range array {
+		if index == 0 {
+			content += BankRateFotmat(rate)
+			str = append(str, content)
+			continue
+		}
+		str = append(str, BankRateFotmat(rate))
 
-	content += fmt.Sprintf("%s匯率\n", esunBank.CN)
-	for _, rate := range *esunRates {
-		content += fmt.Sprintf("幣別 : %s\n現金(賣) : %f\n即期(賣) : %f\n",
-			rate.Currancy,
-			rate.CashSell,
-			rate.SpotSell,
-		)
 	}
-
-	content += fmt.Sprintf("%s匯率\n", taiwanBank.CN)
-	for _, rate := range *taiwanRates {
-		content += fmt.Sprintf("幣別 : %s\n現金(賣) : %f\n即期(賣) : %f\n",
-			rate.Currancy,
-			rate.CashSell,
-			rate.SpotSell,
-		)
-	}
-	return content
+	return str
 }

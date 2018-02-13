@@ -14,7 +14,8 @@ func (ct *JSONTime) UnmarshalJSON(b []byte) (err error) {
 	if b[0] == '"' && b[len(b)-1] == '"' {
 		b = b[1 : len(b)-1]
 	}
-	ct.Time, err = time.Parse(CustomTimeFormat, string(b))
+	loc := time.Now().Local().Location()
+	ct.Time, err = time.ParseInLocation(CustomTimeFormat, string(b), loc)
 	return
 }
 

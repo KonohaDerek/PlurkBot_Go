@@ -14,6 +14,10 @@ RUN apk --update upgrade && \
   update-ca-certificates && \
   rm -rf /var/cache/apk/*
 
+# Setup TimeZone
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Taipei
+
 # Copy binary files
 COPY bin/* /root/
 

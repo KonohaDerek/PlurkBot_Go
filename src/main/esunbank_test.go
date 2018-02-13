@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"testing"
+	"time"
 )
 
 func Test_doGetEsunRate(t *testing.T) {
@@ -16,5 +17,6 @@ func Test_GetEsunRate(t *testing.T) {
 		printfln("%v", err)
 	}
 	rateJson, _ := json.Marshal(esunRates)
+	printfln(" (%v)", time.Now().Local().Format("2006-01-02 15:04:05"))
 	printfln("Esun Rates : %v", string(rateJson))
 }

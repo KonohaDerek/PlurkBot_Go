@@ -45,16 +45,16 @@ func main() {
 		flag.Usage()
 	} else if c != "" {
 		// 認證
-		tok := plurkAuth(&c)
+		token := plurkAuth(&c)
 		// 取得使用者資料
 		opt := map[string]string{}
 		opt["include_plurks"] = "false"
-		ans, _ := callAPI(tok, "/APP/Profile/getOwnProfile", opt)
+		ans, _ := callAPI(token, "/APP/Profile/getOwnProfile", opt)
 		plurker := plurkerObj{} // 使用者
 		json.Unmarshal(ans, &plurker)
 
 		//另起執行續執行加入好友
-		go AutoAddFriends(tok)
+		go AutoAddFriends(token)
 
 		for true {
 			//取得最近的噗
@@ -62,45 +62,54 @@ func main() {
 			opt["offset"] = time.Now().Format("2006-1-2T15:04:05") //現在時間
 			opt["limit"] = "10"
 			opt["minial_user"] = "true"
-			ans, _ := callAPI(tok, "/APP/Timeline/getPlurks", opt)
+			ans, _ := callAPI(token, "/APP/Timeline/getPlurks", opt)
 			plurks := plurksObj{} // 抓回來的噗
 			json.Unmarshal(ans, &plurks)
-			isCall := false
-			isDone := false // 是否結束
-
 			for _, plurk := range plurks.Plurks {
-				// 有匯率字串及問
-				isCall = strings.Contains(plurk.ContentRaw, "匯率") && strings.EqualFold(plurk.Qualifier, "asks")
-
-				if isCall {
-					fmt.Println(plurk.ContentRaw)
-					// 取得回應
-					opt = map[string]string{}
-					opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
-					opt["minimal_user"] = "true"
-					ans, _ = callAPI(tok, "/APP/Responses/get", opt)
-					responses := plurksObj{}
-					json.Unmarshal(ans, &responses)
-					for _, response := range responses.Responses { // 每個回應
-						if !isDone {
-							isDone, _ = regexp.MatchString("取得匯率", response.ContentRaw)
-						}
+				command := strings.Fields(plurk.Content)
+				switch plurk.Qualifier {
+				case "asks":
+					// 有匯率字串
+					if strings.Contains(command[0], "匯率") {
+						fmt.Println(plurk.ContentRaw)
+						doCallRate(token, plurk)
 					}
-					if !isDone {
-						//填入幣別
-						currency := strings.Trim(strings.Replace(plurk.ContentRaw, "匯率", "", 1), " ")
-						contents := callRate(currency)
-						opt = map[string]string{}
-						opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
-						opt["qualifier"] = "says"
-						for _, content := range contents {
-							opt["content"] = fmt.Sprintf("%s", content)
-							callAPI(tok, "/APP/Responses/responseAdd", opt)
-						}
+				case "writes":
+					// 有記事字串
+					if strings.Contains(plurk.ContentRaw, "記事") {
+
 					}
 				}
 			}
 			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+func doCallRate(tok *oauth.Credentials, plurk plurkObj) {
+	isDone := false // 是否結束
+	// 取得回應
+	opt = map[string]string{}
+	opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
+	opt["minimal_user"] = "true"
+	ans, _ := callAPI(tok, "/APP/Responses/get", opt)
+	responses := plurksObj{}
+	json.Unmarshal(ans, &responses)
+	for _, response := range responses.Responses { //每個回應
+		if !isDone {
+			isDone, _ = regexp.MatchString("取得匯率", response.ContentRaw)
+		}
+	}
+	if !isDone {
+		//填入幣別
+		currency := strings.Trim(strings.Replace(plurk.ContentRaw, "匯率", "", 1), " ")
+		contents := callRate(currency)
+		opt = map[string]string{}
+		opt["plurk_id"] = strconv.Itoa(plurk.PlurkID)
+		opt["qualifier"] = "says"
+		for _, content := range contents {
+			opt["content"] = fmt.Sprintf("%s", content)
+			callAPI(tok, "/APP/Responses/responseAdd", opt)
 		}
 	}
 }
